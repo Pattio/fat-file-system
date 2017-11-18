@@ -25,6 +25,7 @@ void writedisk ( const char * filename )
 {
    printf ( "writedisk> virtualdisk[0] = %s\n", virtualDisk[0].data ) ;
    FILE * dest = fopen( filename, "w" ) ;
+
    if ( fwrite ( virtualDisk, sizeof(virtualDisk), 1, dest ) < 0 )
       fprintf ( stderr, "write virtual disk to disk failed\n" ) ;
    //write( dest, virtualDisk, sizeof(virtualDisk) ) ;
@@ -72,32 +73,36 @@ void writeblock ( diskblock_t * block, int block_address )
 
 /* implement format()
  */
-void format ( )
+void format()
 {
-   diskblock_t block ;
-   direntry_t  rootDir ;
-   int         pos             = 0 ;
-   int         fatentry        = 0 ;
-   int         fatblocksneeded =  (MAXBLOCKS / FATENTRYCOUNT ) ;
+    // Create block buffer
+    diskblock_t block;
 
-   /* prepare block 0 : fill it with '\0',
-    * use strcpy() to copy some text to it for test purposes
-	* write block 0 to virtual disk
-	*/
+    // Clean block buffer
+    memset(block.data, 0, BLOCKSIZE);
+    // Put some data to buffer
+    strcpy(block.data, "CS3026 Operating Systems Assessment");
+    // Write buffer to virtual disk
+    writeblock(&block, 0);
 
-	/* prepare FAT table
-	 * write FAT blocks to virtual disk
-	 */
+    // Clean block buffer
+    memset(block.data, 0, BLOCKSIZE);
+    // Setup root directory and write it to virtual disk
+    block.dir.isdir = 1;
+    block.dir.nextEntry = 0;
+    writeblock(&block, 3);
+    rootDirIndex = 3;
 
-	 /* prepare root directory
-	  * write root directory block to virtual disk
-	  */
-
+    // Set all fat entries as unused and write block to virtual disk
+    memset(block.data, UNUSED, BLOCKSIZE);
+    block.fat[0] = ENDOFCHAIN;
+    block.fat[1] = 2;
+    block.fat[2] = ENDOFCHAIN;
+    block.fat[3] = ENDOFCHAIN;
+    writeblock(&block, 1);
+    memset(block.data, UNUSED, BLOCKSIZE);
+    writeblock(&block, 2);
 }
-
-
-/* use this for testing
- */
 
 void printBlock ( int blockIndex )
 {
