@@ -176,6 +176,9 @@ MyFILE *myfopen(const char *filename, const char *mode) {
         return file;
     }
     
+    // If it's read only mode and we didn't find file return null
+    if(strcmp(mode, "r") == 0) return NULL;
+    
     // Find free block on FAT table
     int freeBlockIndex = freeFAT();
     // Set file to use that free block
@@ -202,6 +205,8 @@ MyFILE *myfopen(const char *filename, const char *mode) {
 
 // Close and save file
 void myfclose(MyFILE *stream) {
+    // Check that file exists
+    if(stream == NULL) return;
     writeblock(&stream->buffer, stream->blockno);
     direntry_t *fileDirectory = findFileDirectoryInRoot(stream->dirEntry->name);
     memcpy(fileDirectory, stream->dirEntry, sizeof(direntry_t));
@@ -210,6 +215,9 @@ void myfclose(MyFILE *stream) {
 
 // Put char into file
 void myfputc(int b, MyFILE *stream) {
+    // If file is in read mode don't let to modify it
+    if(stream == NULL || strcmp(stream->mode, "r") == 0) return;
+    
     // Put byte into the buffer
     stream->buffer.data[stream->pos] = b;
     // Increase current active byte position
@@ -233,7 +241,8 @@ void myfputc(int b, MyFILE *stream) {
 
 // Read char from file
 int myfgetc(MyFILE *stream) {
-    
+    // Check if file exists
+    if(stream == NULL) return EOF;
     // If it's end of the file return EOF
     if((stream->currentBlock * BLOCKSIZE + stream->pos) == stream->dirEntry->filelength) return EOF;
     
