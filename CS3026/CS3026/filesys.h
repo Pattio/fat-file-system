@@ -128,6 +128,8 @@ int myfgetc(MyFILE *stream);
 /*******************
  Directory functions
  ********************/
+dirblock_t *getChildDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *childDirectoryName);
+dirblock_t *findDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName);
 dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName);
 void mymkdir(const char *path);
 char **mylistdir(const char *path);

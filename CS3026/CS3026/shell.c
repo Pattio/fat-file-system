@@ -15,6 +15,13 @@ int main(int argc, const char * argv[]) {
     // Format new virtual disk
     format();
     mymkdir("/edvinas/byla/awesome/");
+    mymkdir("/jonas/byla/");
+    mymkdir("/jonas/petras");
+    mymkdir("/PETET/");
+    
+    char **directoryEntries = mylistdir("/edvinas/byla/");
+    while(*directoryEntries != NULL) printf("%s \n", *(directoryEntries++));
+
     writedisk("virtualdiskB3_B1");
     return 0;
 }

@@ -251,6 +251,30 @@ int myfgetc(MyFILE *stream) {
 /*******************
  Directory functions
  ********************/
+dirblock_t *getChildDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *childDirectoryName) {
+    for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
+        if(strcmp(parentDirectoryBlock->entrylist[i].name, childDirectoryName) == 0 &&
+           parentDirectoryBlock->entrylist[i].isdir) {
+            return &(virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir);
+        }
+    }
+    return NULL;
+}
+
+// Can find arbitary directory
+dirblock_t *findDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName) {
+    // Go thourgh all child directories and if directory block is found return it
+    for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
+        if(strcmp(parentDirectoryBlock->entrylist[i].name, directoryName) == 0 &&
+           parentDirectoryBlock->entrylist[i].isdir) {
+            return &(virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir);
+        } else if(parentDirectoryBlock->entrylist[i].isdir) {
+            return findDirectoryBlock(&virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir, directoryName);
+        }
+    }
+    
+    return NULL;
+}
 
 dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName) {
     
@@ -263,7 +287,7 @@ dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *d
     }
     
     // Can't create more directories, because it's already full
-    if(parentDirectoryBlock->nextEntry == DIRENTRYCOUNT - 1) {
+    if(parentDirectoryBlock->nextEntry == DIRENTRYCOUNT) {
         fprintf(stderr, "Can't create child directory, because parent directory is full");
         return NULL;
     }
@@ -309,4 +333,35 @@ void mymkdir(const char *path) {
         }
         parent = createDirectoryBlock(parent, head);
     }
+}
+
+char **mylistdir(const char *path) {
+    // Copy content of char pointer to char array
+    char directoryPath[MAXPATHLENGTH];
+    strcpy(directoryPath, path);
+    // Check if given path is absolute
+    int isAbsolute = directoryPath[0] == '/';
+    dirblock_t *childDirectory = NULL;
+    if(isAbsolute) childDirectory = rootDirectoryBlock;
+    
+    char *head, *tail = directoryPath;
+    while ((head = strtok_r(tail, "/", &tail))) {
+        if(childDirectory == NULL) {
+            fprintf(stderr, "Couldn't find directory \n");
+            return NULL;
+        }
+        childDirectory = getChildDirectoryBlock(childDirectory, head);
+    }
+    
+    // Allocate memory for directory entries
+    char **directoryEntries = malloc((DIRENTRYCOUNT + 1) * sizeof(char *));
+    for(int i = 0; i < DIRENTRYCOUNT + 1; i++) directoryEntries[i] = malloc(MAXNAME);
+    
+    // Copy names from directory to directory enrries
+    for(int i = 0; i < childDirectory->nextEntry; i++) {
+        strcpy(directoryEntries[i], childDirectory->entrylist[i].name);
+    }
+    // Set last element to null
+    directoryEntries[childDirectory->nextEntry] = NULL;
+    return directoryEntries;
 }
