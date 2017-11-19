@@ -59,26 +59,7 @@ void writeblock ( diskblock_t * block, int block_address )
 }
 
 
-/* read and write FAT
- * 
- * please note: a FAT entry is a short, this is a 16-bit word, or 2 bytes
- *              our blocksize for the virtual disk is 1024, therefore
- *              we can store 512 FAT entries in one block
- * 
- *              how many disk blocks do we need to store the complete FAT:
- *              - our virtual disk has MAXBLOCKS blocks, which is currently 1024
- *                each block is 1024 bytes long
- *              - our FAT has MAXBLOCKS entries, which is currently 1024
- *                each FAT entry is a fatentry_t, which is currently 2 bytes
- *              - we need (MAXBLOCKS /(BLOCKSIZE / sizeof(fatentry_t))) blocks to store the
- *                FAT
- *              - each block can hold (BLOCKSIZE / sizeof(fatentry_t)) fat entries
- */
-
-/* implement format()
- */
-void format()
-{
+void format() {
     // Wipe alll data from virtual disk
     for(int i = 0; i < MAXBLOCKS; i++)
         memset(virtualDisk[i].data, 0, BLOCKSIZE);
@@ -266,3 +247,66 @@ int myfgetc(MyFILE *stream) {
     return charInt;
 }
 
+
+/*******************
+ Directory functions
+ ********************/
+
+dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName) {
+    
+    // Go thourgh all child directories and if directory block is found return it
+    for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
+        if(strcmp(parentDirectoryBlock->entrylist[i].name, directoryName) == 0 &&
+           parentDirectoryBlock->entrylist[i].isdir) {
+            return &(virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir);
+        }
+    }
+    
+    // Can't create more directories, because it's already full
+    if(parentDirectoryBlock->nextEntry == DIRENTRYCOUNT - 1) {
+        fprintf(stderr, "Can't create child directory, because parent directory is full");
+        return NULL;
+    }
+
+    int newDirectoryIndex = freeFAT();
+    // Create directory block
+    diskblock_t block; //= malloc(sizeof(dirblock_t));
+    memset(block.data, 0, BLOCKSIZE);
+    block.dir.isdir = 1;
+    block.dir.nextEntry = 0;
+    writeblock(&block, newDirectoryIndex);
+    FAT[newDirectoryIndex] = ENDOFCHAIN;
+    saveFAT();
+    
+    // Create and add directory entry to parent directory
+    direntry_t directoryEntry;
+    memset(&directoryEntry, 0, sizeof(direntry_t));
+    directoryEntry.isdir = 1;
+    directoryEntry.firstblock = newDirectoryIndex;
+    strcpy(directoryEntry.name, directoryName);
+    parentDirectoryBlock->entrylist[parentDirectoryBlock->nextEntry] = directoryEntry;
+    parentDirectoryBlock->nextEntry++;
+    return &virtualDisk[newDirectoryIndex].dir;
+}
+
+void mymkdir(const char *path) {
+    // Copy content of char pointer to char array
+    char directoryPath[MAXPATHLENGTH];
+    strcpy(directoryPath, path);
+    // Check if given path is absolute
+    int isAbsolute = directoryPath[0] == '/';
+    
+    dirblock_t *parent = NULL;
+    if(isAbsolute) parent = rootDirectoryBlock;
+
+    // Create directories from given string
+    char *head;
+    char *tail = directoryPath;
+    while ((head = strtok_r(tail, "/", &tail))) {
+        if(parent == NULL) {
+            fprintf(stderr, "Can't create directory, parent directory either full or doesn't exist \n");
+            break;
+        }
+        parent = createDirectoryBlock(parent, head);
+    }
+}
