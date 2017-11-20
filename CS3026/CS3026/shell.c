@@ -31,15 +31,9 @@ int main(int argc, const char * argv[]) {
     // Format new virtual disk
     format();
     
-    
     mymkdir("/myfirstdir/myseconddir/mythirddir");
     listDirectory("/myfirstdir/myseconddir");
-    writedisk("virtualdiskB3_B1_a");
-    
-    MyFILE *file = myfopen("/myfirstdir/myseconddir/testfile.txt", "w");
-    myfclose(file);
-    listDirectory("/myfirstdir/myseconddir");
+    mychdir("/myfirstdir/myseconddir/mythirddir");
 
-    writedisk("virtualdiskB3_B1_b");
     return 0;
 }

@@ -119,7 +119,6 @@ int freeFAT(void);
 /*******************
  File functions
  ********************/
-direntry_t *findFileDirectoryInRoot(const char *filename);
 MyFILE *myfopen(const char *filename, const char *mode);
 void myfclose(MyFILE *stream);
 void myfputc(int b, MyFILE *stream);
@@ -136,6 +135,7 @@ dirblock_t *getChildDirectoryBlock(dirblock_t *parentDirectoryBlock, const char 
 dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName);
 void mymkdir(const char *path);
 char **mylistdir(const char *path);
+void mychdir(const char *path);
 
 #endif
 

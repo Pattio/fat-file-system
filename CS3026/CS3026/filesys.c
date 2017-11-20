@@ -128,15 +128,6 @@ int freeFAT() {
  File functions
  ********************/
 
-direntry_t *findFileDirectoryInRoot(const char *filename) {
-    for(int i = 0; i < DIRENTRYCOUNT; i++) {
-        if(!rootDirectoryBlock->entrylist[i].isdir &&
-           strcmp(rootDirectoryBlock->entrylist[i].name, filename) == 0)
-            return &(rootDirectoryBlock->entrylist[i]);
-    }
-    return NULL;
-}
-
 // Open file
 MyFILE *myfopen(const char *filename, const char *mode) {
     // Allocate and clean memory for file
@@ -224,10 +215,6 @@ void myfclose(MyFILE *stream) {
     // Check that file exists
     if(stream == NULL) return;
     writeblock(&stream->buffer, stream->blockno);
-//    findDirectoryBlock(<#const char *path#>, <#char **filename#>, <#int modify#>)
-//    stream->dirEntry
-//    direntry_t *fileDirectory = findFileDirectoryInRoot(stream->dirEntry->name);
-//    memcpy(fileDirectory, stream->dirEntry, sizeof(direntry_t));
     free(stream);
 }
 
@@ -413,4 +400,27 @@ char **mylistdir(const char *path) {
     // Set last element to null
     directoryEntries[directoryBlock->nextEntry] = NULL;
     return directoryEntries;
+}
+
+
+void mychdir(const char *path) {
+    char directoryPath[MAXPATHLENGTH];
+    strcpy(directoryPath, path);
+    
+    dirblock_t *parentDirectoryBlock = NULL;
+    int isAbsolute = directoryPath[0] == '/';
+    if(isAbsolute) parentDirectoryBlock = rootDirectoryBlock;
+    
+    char *head, *tail = directoryPath;
+    while ((head = strtok_r(tail, "/", &tail))) {
+        // Go thourgh all child directories and if directory is set it
+        for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
+            if(strcmp(parentDirectoryBlock->entrylist[i].name, head) == 0 &&
+               parentDirectoryBlock->entrylist[i].isdir) {
+                // If last path element then set current dir
+                if(tail == NULL) currentDir = &parentDirectoryBlock->entrylist[i];
+                parentDirectoryBlock = &(virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir);
+            }
+        }
+    }
 }
