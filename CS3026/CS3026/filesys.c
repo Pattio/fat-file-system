@@ -142,46 +142,77 @@ MyFILE *myfopen(const char *filename, const char *mode) {
     // Allocate and clean memory for file
     MyFILE *file = malloc(sizeof(MyFILE));
     memset(file->buffer.data, 0, BLOCKSIZE);
-    // Set file mode
+    // Setup file default data
     strcpy(file->mode, mode);
-    // Set first byte as the one is currently read/written
     file->pos = 0;
     file->currentBlock = 0;
+    
+    if(strcmp(mode, "r") == 0) myfopenRead(filename, file);
+    else if (strcmp(mode, "w") == 0) myfopenWrite(filename, file);
+    
+    return file;
+}
 
-    // If file already exists fill existing file data
-    direntry_t *fileDirectory = findFileDirectoryInRoot(filename);
-    if(fileDirectory != NULL) {
-        file->blockno = fileDirectory->firstblock;
-        file->dirEntry = fileDirectory;
-        memcpy(file->buffer.data, virtualDisk[fileDirectory->firstblock].data, BLOCKSIZE);
-        return file;
+static void myfopenRead(const char *filePath, MyFILE *file) {
+    // Find file directory block
+    char *fileName;
+    dirblock_t *directoryBlock = findDirectoryBlock(filePath, &fileName, 0);
+    // If directory or file not found set file to null and stop execution
+    if(directoryBlock == NULL || fileName == NULL) {
+        file = NULL;
+        return;
     }
     
-    // If it's read only mode and we didn't find file return null
-    if(strcmp(mode, "r") == 0) return NULL;
+    // Go through each entry in directory and if file is found
+    // fill file with all the data
+    for(int i = 0; i < directoryBlock->nextEntry; i++) {
+        if(strcmp(directoryBlock->entrylist[i].name, fileName) == 0 &&
+           !directoryBlock->entrylist[i].isdir) {
+                file->blockno = directoryBlock->entrylist[i].firstblock;
+                file->dirEntry = &directoryBlock->entrylist[i];
+                memcpy(file->buffer.data, virtualDisk[file->blockno].data, BLOCKSIZE);
+        }
+    }
+}
+
+static void myfopenWrite(const char *filePath, MyFILE *file) {
+    char *fileName;
+    dirblock_t *directoryBlock = findDirectoryBlock(filePath, &fileName, 1);
     
-    // Find free block on FAT table
+    // Failed to create directory block
+    if(directoryBlock == NULL) return;
+    
+    // Go through each entry in directory and if file is found
+    // fill file with all the data
+    for(int i = 0; i < directoryBlock->nextEntry; i++) {
+        if(strcmp(directoryBlock->entrylist[i].name, fileName) == 0 &&
+           !directoryBlock->entrylist[i].isdir) {
+            // TODO: CHANGE TO USE BLOCKNO OF CURRENT BUFFER NOT BEGINING
+                file->blockno = directoryBlock->entrylist[i].firstblock;
+                file->dirEntry = &directoryBlock->entrylist[i];
+                memcpy(file->buffer.data, virtualDisk[file->blockno].data, BLOCKSIZE);
+                return;
+        }
+    }
+    
+    // Find and use free block on FAT table
     int freeBlockIndex = freeFAT();
-    // Set file to use that free block
     file->blockno = freeBlockIndex;
-    // Update FAT table, which is store in memory
     FAT[freeBlockIndex] = ENDOFCHAIN;
     saveFAT();
     
     // Create and setup directory entry
-    fileDirectory = malloc(sizeof(direntry_t));
+    direntry_t *fileDirectory = malloc(sizeof(direntry_t));
     memset(fileDirectory, 0, sizeof(direntry_t));
     fileDirectory->filelength = 0;
     fileDirectory->isdir = 0;
     fileDirectory->firstblock = freeBlockIndex;
-    strcpy(fileDirectory->name, filename);
-    
+    strcpy(fileDirectory->name, fileName);
     file->dirEntry = fileDirectory;
-    // Put file entry into root directory
-    rootDirectoryBlock->entrylist[rootDirectoryBlock->nextEntry] = *fileDirectory;
-    rootDirectoryBlock->nextEntry++;
     
-    return file;
+    // Put file entry into current directory
+    directoryBlock->entrylist[directoryBlock->nextEntry] = *fileDirectory;
+    directoryBlock->nextEntry++;
 }
 
 // Close and save file
@@ -251,6 +282,44 @@ int myfgetc(MyFILE *stream) {
 /*******************
  Directory functions
  ********************/
+// If directory path is given function returns last element directory
+// if directory with filename is given it will return last element directory
+// and changes filename to point to name of the file
+dirblock_t * findDirectoryBlock(const char *path, char **filename, int modify) {
+    char blockPath[MAXPATHLENGTH];
+    strcpy(blockPath, path);
+    
+    dirblock_t *parentDirectoryBlock = NULL;
+    int isAbsolute = blockPath[0] == '/';
+    if(isAbsolute) parentDirectoryBlock = rootDirectoryBlock;
+    
+    char *head, *tail = blockPath;
+    while ((head = strtok_r(tail, "/", &tail))) {
+        // If current token is file set filename
+        // and return its parent directory
+        if(strchr(head, '.') != NULL) {
+            *filename = malloc(MAXNAME);
+            strcpy(*filename, head);
+            return parentDirectoryBlock;
+        }
+        
+        int found = 0;
+        for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
+            if(strcmp(parentDirectoryBlock->entrylist[i].name, head) == 0 &&
+               parentDirectoryBlock->entrylist[i].isdir) {
+                parentDirectoryBlock = &(virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir);
+                found = 1;
+            }
+        }
+        
+        // If directory not found and modify is set to true, create new directory
+        if(found == 0 && modify == 0) return NULL;
+        else if(found == 0 && modify) parentDirectoryBlock = createDirectoryBlock(parentDirectoryBlock, head);
+    
+    }
+    return parentDirectoryBlock;
+}
+
 dirblock_t *getChildDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *childDirectoryName) {
     for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
         if(strcmp(parentDirectoryBlock->entrylist[i].name, childDirectoryName) == 0 &&
@@ -261,23 +330,7 @@ dirblock_t *getChildDirectoryBlock(dirblock_t *parentDirectoryBlock, const char 
     return NULL;
 }
 
-// Can find arbitary directory
-dirblock_t *findDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName) {
-    // Go thourgh all child directories and if directory block is found return it
-    for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
-        if(strcmp(parentDirectoryBlock->entrylist[i].name, directoryName) == 0 &&
-           parentDirectoryBlock->entrylist[i].isdir) {
-            return &(virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir);
-        } else if(parentDirectoryBlock->entrylist[i].isdir) {
-            return findDirectoryBlock(&virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir, directoryName);
-        }
-    }
-    
-    return NULL;
-}
-
 dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName) {
-    
     // Go thourgh all child directories and if directory block is found return it
     for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
         if(strcmp(parentDirectoryBlock->entrylist[i].name, directoryName) == 0 &&
@@ -294,7 +347,7 @@ dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *d
 
     int newDirectoryIndex = freeFAT();
     // Create directory block
-    diskblock_t block; //= malloc(sizeof(dirblock_t));
+    diskblock_t block;
     memset(block.data, 0, BLOCKSIZE);
     block.dir.isdir = 1;
     block.dir.nextEntry = 0;
@@ -314,6 +367,7 @@ dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *d
 }
 
 void mymkdir(const char *path) {
+    
     // Copy content of char pointer to char array
     char directoryPath[MAXPATHLENGTH];
     strcpy(directoryPath, path);
@@ -336,32 +390,21 @@ void mymkdir(const char *path) {
 }
 
 char **mylistdir(const char *path) {
-    // Copy content of char pointer to char array
-    char directoryPath[MAXPATHLENGTH];
-    strcpy(directoryPath, path);
-    // Check if given path is absolute
-    int isAbsolute = directoryPath[0] == '/';
-    dirblock_t *childDirectory = NULL;
-    if(isAbsolute) childDirectory = rootDirectoryBlock;
-    
-    char *head, *tail = directoryPath;
-    while ((head = strtok_r(tail, "/", &tail))) {
-        if(childDirectory == NULL) {
-            fprintf(stderr, "Couldn't find directory \n");
-            return NULL;
-        }
-        childDirectory = getChildDirectoryBlock(childDirectory, head);
-    }
+    // Find directory block of last element in path
+    dirblock_t *directoryBlock = findDirectoryBlock(path, NULL, 0);
+    // If directory doesn't exist return null
+    if(directoryBlock == NULL) return NULL;
     
     // Allocate memory for directory entries
     char **directoryEntries = malloc((DIRENTRYCOUNT + 1) * sizeof(char *));
     for(int i = 0; i < DIRENTRYCOUNT + 1; i++) directoryEntries[i] = malloc(MAXNAME);
     
     // Copy names from directory to directory enrries
-    for(int i = 0; i < childDirectory->nextEntry; i++) {
-        strcpy(directoryEntries[i], childDirectory->entrylist[i].name);
+    for(int i = 0; i < directoryBlock->nextEntry; i++) {
+        strcpy(directoryEntries[i], directoryBlock->entrylist[i].name);
     }
+    
     // Set last element to null
-    directoryEntries[childDirectory->nextEntry] = NULL;
+    directoryEntries[directoryBlock->nextEntry] = NULL;
     return directoryEntries;
 }

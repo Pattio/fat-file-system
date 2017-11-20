@@ -125,11 +125,14 @@ void myfclose(MyFILE *stream);
 void myfputc(int b, MyFILE *stream);
 int myfgetc(MyFILE *stream);
 
+static void myfopenRead(const char *filePath, MyFILE *file);
+static void myfopenWrite(const char *filePath, MyFILE *file);
+
 /*******************
  Directory functions
  ********************/
+dirblock_t *findDirectoryBlock(const char *path, char **filename, int modify);
 dirblock_t *getChildDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *childDirectoryName);
-dirblock_t *findDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName);
 dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *directoryName);
 void mymkdir(const char *path);
 char **mylistdir(const char *path);
