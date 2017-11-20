@@ -1,0 +1,9 @@
+Printing contents of /myfirstdir/myseconddir:
+mythirddir 
+---------------
+writedisk> virtualdisk[0] = CS3026 Operating Systems Assessment
+Printing contents of /myfirstdir/myseconddir:
+mythirddir 
+testfile.txt 
+---------------
+writedisk> virtualdisk[0] = CS3026 Operating Systems Assessment
