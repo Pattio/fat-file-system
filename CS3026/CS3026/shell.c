@@ -30,10 +30,23 @@ void listDirectory(char *directoryPath) {
 int main(int argc, const char * argv[]) {
     // Format new virtual disk
     format();
+    mymkdir("/firstdir/seconddir");
+    MyFILE *file = myfopen("/firstdir/seconddir/testfile1.txt", "w");
+    myfputc('X', file);
+    myfclose(file);
+    listDirectory("/firstdir/seconddir");
+    mychdir("/firstdir/seconddir");
+    listDirectory("/firstdir/seconddir");
+    MyFILE *file2 = myfopen("testfile2.txt", "w");
+    myfputc('Y', file2);
+    myfclose(file2);
+    mymkdir("thirddir");
+    MyFILE *file3 = myfopen("thirddir/testfile3.txt", "w");
+    myfputc('Z', file3);
+    myfclose(file3);
+    writedisk("virtualdiskA5_A1_a");
     
-    mymkdir("/myfirstdir/myseconddir/mythirddir");
-    listDirectory("/myfirstdir/myseconddir");
-    mychdir("/myfirstdir/myseconddir/mythirddir");
+    pwd();
 
     return 0;
 }

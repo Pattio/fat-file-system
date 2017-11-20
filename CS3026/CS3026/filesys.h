@@ -136,6 +136,7 @@ dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *d
 void mymkdir(const char *path);
 char **mylistdir(const char *path);
 void mychdir(const char *path);
+void pwd();
 
 #endif
 

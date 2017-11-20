@@ -285,6 +285,7 @@ dirblock_t * findDirectoryBlock(const char *path, char **filename, int modify) {
     dirblock_t *parentDirectoryBlock = NULL;
     int isAbsolute = blockPath[0] == '/';
     if(isAbsolute) parentDirectoryBlock = rootDirectoryBlock;
+    else parentDirectoryBlock = &(virtualDisk[currentDir->firstblock].dir);
     
     char *head, *tail = blockPath;
     while ((head = strtok_r(tail, "/", &tail))) {
@@ -369,6 +370,7 @@ void mymkdir(const char *path) {
     
     dirblock_t *parent = NULL;
     if(isAbsolute) parent = rootDirectoryBlock;
+    else parent = &(virtualDisk[currentDir->firstblock].dir);
 
     // Create directories from given string
     char *head;
@@ -409,7 +411,9 @@ void mychdir(const char *path) {
     
     dirblock_t *parentDirectoryBlock = NULL;
     int isAbsolute = directoryPath[0] == '/';
-    if(isAbsolute) parentDirectoryBlock = rootDirectoryBlock;
+    if(isAbsolute || currentDir == NULL) parentDirectoryBlock = rootDirectoryBlock;
+    else parentDirectoryBlock = &(virtualDisk[currentDir->firstblock].dir);
+    
     
     char *head, *tail = directoryPath;
     while ((head = strtok_r(tail, "/", &tail))) {
@@ -423,4 +427,9 @@ void mychdir(const char *path) {
             }
         }
     }
+}
+
+void pwd() {
+    if(currentDir == NULL) printf("Working directory is / \n");
+    else printf("Working directory is: %s\n", currentDir->name);
 }
