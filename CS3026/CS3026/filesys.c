@@ -147,36 +147,40 @@ MyFILE *myfopen(const char *filename, const char *mode) {
     file->pos = 0;
     file->currentBlock = 0;
     
-    if(strcmp(mode, "r") == 0) myfopenRead(filename, file);
-    else if (strcmp(mode, "w") == 0) myfopenWrite(filename, file);
+    if(strcmp(mode, "r") == 0) myfopenRead(filename, &file);
+    else if (strcmp(mode, "w") == 0) myfopenWrite(filename, &file);
     
     return file;
 }
 
-static void myfopenRead(const char *filePath, MyFILE *file) {
+static void myfopenRead(const char *filePath, MyFILE **file) {
     // Find file directory block
-    char *fileName;
+    char *fileName = NULL;
     dirblock_t *directoryBlock = findDirectoryBlock(filePath, &fileName, 0);
     // If directory or file not found set file to null and stop execution
     if(directoryBlock == NULL || fileName == NULL) {
-        file = NULL;
+        *file = NULL;
         return;
     }
     
     // Go through each entry in directory and if file is found
     // fill file with all the data
+    int foundFile = 0;
     for(int i = 0; i < directoryBlock->nextEntry; i++) {
         if(strcmp(directoryBlock->entrylist[i].name, fileName) == 0 &&
            !directoryBlock->entrylist[i].isdir) {
-                file->blockno = directoryBlock->entrylist[i].firstblock;
-                file->dirEntry = &directoryBlock->entrylist[i];
-                memcpy(file->buffer.data, virtualDisk[file->blockno].data, BLOCKSIZE);
+                (*file)->blockno = directoryBlock->entrylist[i].firstblock;
+                (*file)->dirEntry = &directoryBlock->entrylist[i];
+                memcpy((*file)->buffer.data, virtualDisk[(*file)->blockno].data, BLOCKSIZE);
+                foundFile = 1;
         }
     }
+    
+    if(!foundFile) *file = NULL;
 }
 
-static void myfopenWrite(const char *filePath, MyFILE *file) {
-    char *fileName;
+static void myfopenWrite(const char *filePath, MyFILE **file) {
+    char *fileName = NULL;
     dirblock_t *directoryBlock = findDirectoryBlock(filePath, &fileName, 1);
     
     // Failed to create directory block
@@ -188,16 +192,16 @@ static void myfopenWrite(const char *filePath, MyFILE *file) {
         if(strcmp(directoryBlock->entrylist[i].name, fileName) == 0 &&
            !directoryBlock->entrylist[i].isdir) {
             // TODO: CHANGE TO USE BLOCKNO OF CURRENT BUFFER NOT BEGINING
-                file->blockno = directoryBlock->entrylist[i].firstblock;
-                file->dirEntry = &directoryBlock->entrylist[i];
-                memcpy(file->buffer.data, virtualDisk[file->blockno].data, BLOCKSIZE);
+                (*file)->blockno = directoryBlock->entrylist[i].firstblock;
+                (*file)->dirEntry = &directoryBlock->entrylist[i];
+                memcpy((*file)->buffer.data, virtualDisk[(*file)->blockno].data, BLOCKSIZE);
                 return;
         }
     }
     
     // Find and use free block on FAT table
     int freeBlockIndex = freeFAT();
-    file->blockno = freeBlockIndex;
+    (*file)->blockno = freeBlockIndex;
     FAT[freeBlockIndex] = ENDOFCHAIN;
     saveFAT();
     
@@ -208,7 +212,7 @@ static void myfopenWrite(const char *filePath, MyFILE *file) {
     fileDirectory->isdir = 0;
     fileDirectory->firstblock = freeBlockIndex;
     strcpy(fileDirectory->name, fileName);
-    file->dirEntry = fileDirectory;
+    (*file)->dirEntry = fileDirectory;
     
     // Put file entry into current directory
     directoryBlock->entrylist[directoryBlock->nextEntry] = *fileDirectory;
@@ -220,8 +224,10 @@ void myfclose(MyFILE *stream) {
     // Check that file exists
     if(stream == NULL) return;
     writeblock(&stream->buffer, stream->blockno);
-    direntry_t *fileDirectory = findFileDirectoryInRoot(stream->dirEntry->name);
-    memcpy(fileDirectory, stream->dirEntry, sizeof(direntry_t));
+//    findDirectoryBlock(<#const char *path#>, <#char **filename#>, <#int modify#>)
+//    stream->dirEntry
+//    direntry_t *fileDirectory = findFileDirectoryInRoot(stream->dirEntry->name);
+//    memcpy(fileDirectory, stream->dirEntry, sizeof(direntry_t));
     free(stream);
 }
 

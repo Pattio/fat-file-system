@@ -125,8 +125,8 @@ void myfclose(MyFILE *stream);
 void myfputc(int b, MyFILE *stream);
 int myfgetc(MyFILE *stream);
 
-static void myfopenRead(const char *filePath, MyFILE *file);
-static void myfopenWrite(const char *filePath, MyFILE *file);
+static void myfopenRead(const char *filePath, MyFILE **file);
+static void myfopenWrite(const char *filePath, MyFILE **file);
 
 /*******************
  Directory functions
