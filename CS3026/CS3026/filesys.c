@@ -271,6 +271,58 @@ int myfgetc(MyFILE *stream) {
     return charInt;
 }
 
+void myremove(const char *path) {
+    char *fileName = NULL;
+    dirblock_t *directoryBlock = findDirectoryBlock(path, &fileName, 0);
+    if(directoryBlock == NULL) {
+        fprintf(stderr, "Couldn't find file directory, nothing was deleted\n");
+        return;
+    }
+    
+    int foundFile = 0;
+    for(int i = 0; i < directoryBlock->nextEntry; i++) {
+        if(strcmp(directoryBlock->entrylist[i].name, fileName) == 0 &&
+           !directoryBlock->entrylist[i].isdir && !foundFile) {
+            // If file is found clean it's virtual disk entries
+            // and clean it's entrylist entry
+            foundFile = 1;
+            cleanVirtualDisk(directoryBlock->entrylist[i].firstblock);
+            memset(&directoryBlock->entrylist[i], 0, sizeof(direntry_t));
+        }
+        
+        // Check if there exist more files in directory
+        if(foundFile && i + 1 < directoryBlock->nextEntry) {
+            // Shift next entry data to current entry
+            memcpy(&directoryBlock->entrylist[i], &directoryBlock->entrylist[i + 1], sizeof(direntry_t));
+            // Wipe next entry
+            memset(&directoryBlock->entrylist[i + 1], 0, sizeof(direntry_t));
+        }
+    }
+    
+    if(!foundFile) {
+        fprintf(stderr, "Couldn't find file, nothing was deleted\n");
+        return;
+    }
+    // Decrease directory entries count by 1
+    directoryBlock->nextEntry--;
+}
+
+void cleanVirtualDisk(short firstFATIndex) {
+    short currentFATIndex = firstFATIndex;
+    // While entry continous in FAT table, remove data in
+    // virtual disk and mark FAT entries as unused
+    while (1) {
+        memset(virtualDisk[currentFATIndex].data, 0, BLOCKSIZE);\
+        if(FAT[currentFATIndex] == ENDOFCHAIN) {
+            FAT[currentFATIndex] = UNUSED;
+            break;
+        }
+        int copyIndex = currentFATIndex;
+        currentFATIndex = FAT[currentFATIndex];
+        FAT[copyIndex] = UNUSED;
+    }
+    saveFAT();
+}
 
 /*******************
  Directory functions

@@ -37,6 +37,7 @@ int main(int argc, const char * argv[]) {
     listDirectory("/firstdir/seconddir");
     mychdir("/firstdir/seconddir");
     listDirectory("/firstdir/seconddir");
+    pwd();
     MyFILE *file2 = myfopen("testfile2.txt", "w");
     myfputc('Y', file2);
     myfclose(file2);
@@ -44,9 +45,10 @@ int main(int argc, const char * argv[]) {
     MyFILE *file3 = myfopen("thirddir/testfile3.txt", "w");
     myfputc('Z', file3);
     myfclose(file3);
-    writedisk("virtualdiskA5_A1_a");
-    
+    listDirectory("/firstdir/seconddir");
+    myremove("testfile2.txt");
+    listDirectory("/firstdir/seconddir");
     pwd();
-
+    writedisk("virtualdiskA5_A1_a");
     return 0;
 }
