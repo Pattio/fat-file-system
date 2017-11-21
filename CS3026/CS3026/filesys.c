@@ -290,7 +290,7 @@ void myremove(const char *path) {
             memset(&directoryBlock->entrylist[i], 0, sizeof(direntry_t));
         }
         
-        // Check if there exist more files in directory
+        // Check if there exist more entries in directory
         if(foundFile && i + 1 < directoryBlock->nextEntry) {
             // Shift next entry data to current entry
             memcpy(&directoryBlock->entrylist[i], &directoryBlock->entrylist[i + 1], sizeof(direntry_t));
@@ -413,7 +413,6 @@ dirblock_t *createDirectoryBlock(dirblock_t *parentDirectoryBlock, const char *d
 }
 
 void mymkdir(const char *path) {
-    
     // Copy content of char pointer to char array
     char directoryPath[MAXPATHLENGTH];
     strcpy(directoryPath, path);
@@ -433,6 +432,71 @@ void mymkdir(const char *path) {
             break;
         }
         parent = createDirectoryBlock(parent, head);
+    }
+}
+
+void myrmdir(const char *path) {
+    dirblock_t *directoryBlock = findDirectoryBlock(path, NULL, 0);
+    dirblock_t *parentDirectoryBlock = findParentBlock(rootDirectoryBlock, directoryBlock);
+    
+    if(directoryBlock == NULL) {
+        fprintf(stderr, "Directory doesn't exist can't delete it");
+        return;
+    }
+
+    // Delete all children directories and files
+    deleteBlock(directoryBlock);
+    // Go through parent directory and shift directory entries
+    int foundFolder = 0;
+    for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
+        if(&virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir == directoryBlock && !foundFolder) {
+            // If folder is found clean it's virtual disk entries
+            // and clean it's entrylist entry
+            foundFolder = 1;
+            cleanVirtualDisk(parentDirectoryBlock->entrylist[i].firstblock);
+            memset(&parentDirectoryBlock->entrylist[i], 0, sizeof(direntry_t));
+        }
+        
+        // Check if there exist more entries in directory
+        if(foundFolder && i + 1 < parentDirectoryBlock->nextEntry) {
+            // Shift next entry data to current entry
+            memcpy(&parentDirectoryBlock->entrylist[i], &parentDirectoryBlock->entrylist[i + 1], sizeof(direntry_t));
+            // Wipe next entry
+            memset(&parentDirectoryBlock->entrylist[i + 1], 0, sizeof(direntry_t));
+        }
+    }
+    
+    if(!foundFolder) {
+        fprintf(stderr, "Couldn't find folder, nothing was deleted\n");
+        return;
+    }
+
+    parentDirectoryBlock->nextEntry--;
+}
+
+dirblock_t *findParentBlock(dirblock_t *startingBlock, dirblock_t *block) {
+    for(int i = 0; i < startingBlock->nextEntry; i++) {
+        // Check if entry is directory
+        if(startingBlock->entrylist[i].isdir) {
+            // If directory points to block we are looking for return its parent
+            if(&virtualDisk[startingBlock->entrylist[i].firstblock].dir == block) {
+                return startingBlock;
+            }
+            dirblock_t *result = findParentBlock(&virtualDisk[startingBlock->entrylist[i].firstblock].dir, block);
+            if(result != NULL) return result;
+        }
+    }
+    return NULL;
+}
+
+void deleteBlock(dirblock_t *block) {
+    for(int i = 0; i < block->nextEntry; i++) {
+        // If it's file then just delete it from VD and free FAT entries
+        // if it's directory recursively call function again
+        if(block->entrylist[i].isdir) {
+            deleteBlock(&virtualDisk[block->entrylist[i].firstblock].dir);
+        }
+        cleanVirtualDisk(block->entrylist[i].firstblock);
     }
 }
 
