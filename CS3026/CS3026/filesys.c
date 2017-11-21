@@ -336,6 +336,30 @@ dirblock_t * findDirectoryBlock(const char *path, char **filename, int modify) {
     
     dirblock_t *parentDirectoryBlock = NULL;
     int isAbsolute = blockPath[0] == '/';
+    
+    if(blockPath[0] == '.' && strlen(blockPath) == 1) {
+        return &virtualDisk[currentDir->firstblock].dir;//currentDir->firstblock
+    }
+    if(blockPath[0] == '.' && blockPath[1] == '.' && strlen(blockPath) == 2) {
+        if(currentDir == NULL) {
+            printf("Couldn't find directory\n");
+            return NULL;
+        } else {
+            dirblock_t *parentBlock = findParentBlock(rootDirectoryBlock, &virtualDisk[currentDir->firstblock].dir);
+            if(parentBlock == rootDirectoryBlock) {
+                printf("You are in the root directory");
+                return NULL;
+            }
+            return parentBlock;
+            dirblock_t *grandParentBlock = findParentBlock(rootDirectoryBlock, parentBlock);
+            for(int i = 0; i < grandParentBlock->nextEntry; i++) {
+                if(&virtualDisk[grandParentBlock->entrylist[i].firstblock].dir == parentBlock) {
+//                    return parentBlock;
+                }
+            }
+        }
+    }
+    
     if(isAbsolute || currentDir == NULL) parentDirectoryBlock = rootDirectoryBlock;
     else parentDirectoryBlock = &(virtualDisk[currentDir->firstblock].dir);
     
@@ -525,6 +549,26 @@ void mychdir(const char *path) {
     char directoryPath[MAXPATHLENGTH];
     strcpy(directoryPath, path);
     
+    
+    if(directoryPath[0] == '.' && strlen(directoryPath) == 1) return;
+    if(directoryPath[0] == '.' && directoryPath[1] == '.' &&
+       strlen(directoryPath) == 2) {
+        if(currentDir == NULL) {
+             printf("You are already in root category\n");
+        } else {
+            dirblock_t *parentBlock = findParentBlock(rootDirectoryBlock, &virtualDisk[currentDir->firstblock].dir);
+            if(parentBlock == rootDirectoryBlock) {
+                currentDir = NULL;
+                return;
+            }
+            dirblock_t *grandParentBlock = findParentBlock(rootDirectoryBlock, parentBlock);
+            for(int i = 0; i < grandParentBlock->nextEntry; i++) {
+                if(&virtualDisk[grandParentBlock->entrylist[i].firstblock].dir == parentBlock) {
+                    currentDir = &grandParentBlock->entrylist[i];
+                }
+            }
+        }
+    }
     dirblock_t *parentDirectoryBlock = NULL;
     int isAbsolute = directoryPath[0] == '/';
     if(isAbsolute && strlen(directoryPath) == 1) {

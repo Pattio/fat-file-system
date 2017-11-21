@@ -1,0 +1,10 @@
+Printing contents of /firstdir/seconddir:
+testfile1.txt 
+---------------
+Printing contents of /firstdir/seconddir:
+testfile1.txt 
+---------------
+writedisk> virtualdisk[0] = CS3026 Operating Systems Assessment
+writedisk> virtualdisk[0] = CS3026 Operating Systems Assessment
+writedisk> virtualdisk[0] = CS3026 Operating Systems Assessment
+writedisk> virtualdisk[0] = CS3026 Operating Systems Assessment

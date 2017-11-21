@@ -75,11 +75,10 @@ int main(int argc, const char * argv[]) {
     // Call myrmdir ( “seconddir” )
     myrmdir("seconddir");
     // Call mychdir(“/”) or mychdir(“..”)
-    mychdir("/");
+    mychdir("..");
     // Call myrmdir( “firstdir”)
     myrmdir("firstdir");
     // Write out virtual disk to “virtualdiskA5_A1_d”
     writedisk("virtualdiskA5_A1_d");
-    // pwd();
     return 0;
 }
