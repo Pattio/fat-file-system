@@ -1,43 +1,33 @@
-/* filesys.c
- * 
- * provides interface to virtual disk
- * 
- */
-#include <stdio.h>
+/* filesys.c */
+
 #include <unistd.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
 #include "filesys.h"
 
-
-diskblock_t  virtualDisk [MAXBLOCKS] ;           // define our in-memory virtual, with MAXBLOCKS blocks
-fatentry_t   FAT         [MAXBLOCKS] ;           // define a file allocation table with MAXBLOCKS 16-bit entries
-
+diskblock_t virtualDisk [MAXBLOCKS];
+fatentry_t  FAT         [MAXBLOCKS];
 
 dirblock_t *rootDirectoryBlock = &(virtualDisk[rootDirectoryIndex].dir);
-
-direntry_t * currentDir              = NULL ;
-fatentry_t   currentDirIndex         = 0 ;
+direntry_t *currentDir = NULL;
+fatentry_t currentDirIndex = 0;
 
 /*******************
  Virtual disk functions
  ********************/
-void writedisk ( const char * filename )
-{
-   printf ( "writedisk> virtualdisk[0] = %s\n", virtualDisk[0].data ) ;
-   FILE * dest = fopen( filename, "w" ) ;
-
-   if ( fwrite ( virtualDisk, sizeof(virtualDisk), 1, dest ) < 0 )
-      fprintf ( stderr, "write virtual disk to disk failed\n" ) ;
-   //write( dest, virtualDisk, sizeof(virtualDisk) ) ;
+void writedisk(const char *filename) {
+   printf("writedisk> virtualdisk[0] = %s\n", virtualDisk[0].data);
+   FILE *dest = fopen(filename, "w");
+   if (fwrite(virtualDisk, sizeof(virtualDisk), 1, dest ) < 1)
+      fprintf(stderr, "write virtual disk to disk failed\n");
    fclose(dest) ;
-   
 }
 
-void readdisk (const char *filename)
-{
+void readdisk(const char *filename) {
     FILE *dest = fopen(filename, "r");
-    if (fread (virtualDisk, sizeof(virtualDisk), 1, dest) < 0)
+    if (fread(virtualDisk, sizeof(virtualDisk), 1, dest) < 1)
         fprintf(stderr, "write virtual disk to disk failed\n");
     else
         loadFAT();
@@ -103,17 +93,9 @@ void readEncryptedDisk(const char *filename, const char *password) {
     fclose(encryptedFile);
 }
 
-/* the basic interface to the virtual disk
- * this moves memory around
- */
-
-void writeblock ( diskblock_t * block, int block_address )
-{
-   //printf ( "writeblock> block %d = %s\n", block_address, block->data ) ;
-   memmove ( virtualDisk[block_address].data, block->data, BLOCKSIZE ) ;
-   //printf ( "writeblock> virtualdisk[%d] = %s / %d\n", block_address, virtualDisk[block_address].data, (int)virtualDisk[block_address].data ) ;
+void writeblock(diskblock_t *block, int block_address) {
+   memmove(virtualDisk[block_address].data, block->data, BLOCKSIZE);
 }
-
 
 void format() {
     // Wipe alll data from virtual disk
@@ -139,7 +121,6 @@ void format() {
     block.dir.nextEntry = 0;
     writeblock(&block, 3);
     
-
     // Set all fat entries as unused and save FAT block to virtual disk
     memset(FAT, UNUSED, MAXBLOCKS * 2);
     FAT[0] = ENDOFCHAIN;
@@ -171,7 +152,7 @@ void saveFAT() {
     memcpy(virtualDisk[2].fat, FAT + FATENTRYCOUNT - 1, MAXBLOCKS);
 }
 
-// find free FAT entry, if not found return -1
+// Find free FAT entry, if not found return -1
 int freeFAT() {
     for(int i = 0; i < MAXBLOCKS; i++) {
         if(FAT[i] == UNUSED) return i;
@@ -182,22 +163,6 @@ int freeFAT() {
 /*******************
  File functions
  ********************/
-
-// Open file
-MyFILE *myfopen(const char *filename, const char *mode) {
-    // Allocate and clean memory for file
-    MyFILE *file = malloc(sizeof(MyFILE));
-    memset(file->buffer.data, 0, BLOCKSIZE);
-    // Setup file default data
-    strcpy(file->mode, mode);
-    file->pos = 0;
-    file->currentBlock = 0;
-    
-    if(strcmp(mode, "r") == 0) myfopenRead(filename, &file);
-    else if (strcmp(mode, "w") == 0) myfopenWrite(filename, &file);
-    
-    return file;
-}
 
 static void myfopenRead(const char *filePath, MyFILE **file) {
     // Find file directory block
@@ -262,6 +227,21 @@ static void myfopenWrite(const char *filePath, MyFILE **file) {
     directoryBlock->entrylist[directoryBlock->nextEntry] = *fileDirectory;
     (*file)->dirEntry = &directoryBlock->entrylist[directoryBlock->nextEntry];
     directoryBlock->nextEntry++;
+}
+
+MyFILE *myfopen(const char *filename, const char *mode) {
+    // Allocate and clean memory for file
+    MyFILE *file = malloc(sizeof(MyFILE));
+    memset(file->buffer.data, 0, BLOCKSIZE);
+    // Setup file default data
+    strcpy(file->mode, mode);
+    file->pos = 0;
+    file->currentBlock = 0;
+    
+    if(strcmp(mode, "r") == 0) myfopenRead(filename, &file);
+    else if (strcmp(mode, "w") == 0) myfopenWrite(filename, &file);
+    
+    return file;
 }
 
 // Close and save file
@@ -719,7 +699,41 @@ void mychdir(const char *path) {
     }
 }
 
+static int pwdRec(dirblock_t *startingBlock, char **pathElements, int *elementCount) {
+    // Starting from starting block go through each block and recursively check
+    // if block has current directory inside, when block with current directory is
+    // found unwrap recursion by adding
+    for(int i = 0; i < startingBlock->nextEntry; i++) {
+        if(&startingBlock->entrylist[i] == currentDir ||
+           (startingBlock->entrylist[i].isdir && pwdRec(&virtualDisk[startingBlock->entrylist[i].firstblock].dir, pathElements, elementCount))) {
+            // Allocate memory for new path element
+            pathElements[(*elementCount) - 1] = malloc(MAXNAME);
+            // Copy name of directory entry
+            memcpy(pathElements[(*elementCount) - 1], startingBlock->entrylist[i].name, MAXNAME);
+            // Increase number of path elements
+            (*elementCount)++;
+            // Reallocate memory for new path elements
+            pathElements = realloc(pathElements, *elementCount);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void pwd() {
-    if(currentDir == NULL) printf("Working directory is / \n");
-    else printf("Working directory is: %s\n", currentDir->name);
+    if(currentDir == NULL) {
+        printf("Working directory is / \n");
+    } else {
+        int elementCount = 1;
+        char **pathElements = malloc(elementCount * sizeof(char*));
+        printf("Working directory is /");
+        pwdRec(rootDirectoryBlock, pathElements, &elementCount);
+        // Last element is empty so start from second to last element
+        for(int i = elementCount - 2; i >= 0; i--) {
+            printf("%s/", pathElements[i]);
+            free(pathElements[i]);
+        }
+        free(pathElements);
+        printf("\n");
+    }
 }
