@@ -19,11 +19,9 @@ dirblock_t *rootDirectoryBlock = &(virtualDisk[rootDirectoryIndex].dir);
 direntry_t * currentDir              = NULL ;
 fatentry_t   currentDirIndex         = 0 ;
 
-/* writedisk : writes virtual disk out to physical disk
- * 
- * in: file name of stored virtual disk
- */
-
+/*******************
+ Virtual disk functions
+ ********************/
 void writedisk ( const char * filename )
 {
    printf ( "writedisk> virtualdisk[0] = %s\n", virtualDisk[0].data ) ;
@@ -70,7 +68,9 @@ void format() {
     // Clean block buffer
     memset(block.data, 0, BLOCKSIZE);
     // Put some data to buffer
-    strcpy(block.data, "CS3026 Operating Systems Assessment");
+    strcpy(block.volume.name, "CS3026 Operating Systems Assessment Multi-Threaded");
+    // Initialize mutext
+    pthread_mutex_init(&(block.volume.lock), NULL);
     // Write buffer to virtual disk
     writeblock(&block, 0);
 
@@ -91,11 +91,9 @@ void format() {
     saveFAT();
 }
 
-void printBlock ( int blockIndex )
-{
-   printf ( "virtualdisk[%d] = %s\n", blockIndex, virtualDisk[blockIndex].data ) ;
+pthread_mutex_t *getVirtualDiskLock(void) {
+    return &virtualDisk[0].volume.lock;
 }
-
 
 /*******************
  FAT table functions
@@ -122,7 +120,6 @@ int freeFAT() {
     }
     return -1;
 }
-
 
 /*******************
  File functions
@@ -182,7 +179,6 @@ static void myfopenWrite(const char *filePath, MyFILE **file) {
     for(int i = 0; i < directoryBlock->nextEntry; i++) {
         if(strcmp(directoryBlock->entrylist[i].name, fileName) == 0 &&
            !directoryBlock->entrylist[i].isdir) {
-            // TODO: CHANGE TO USE BLOCKNO OF CURRENT BUFFER NOT BEGINING
                 (*file)->blockno = directoryBlock->entrylist[i].firstblock;
                 (*file)->dirEntry = &directoryBlock->entrylist[i];
                 memcpy((*file)->buffer.data, virtualDisk[(*file)->blockno].data, BLOCKSIZE);

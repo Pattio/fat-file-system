@@ -10,22 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "filesys.h"
+#include <pthread.h>
 
-void listDirectory(char *directoryPath) {
-    char **directoryEntries = mylistdir(directoryPath);
-    printf("Printing contents of %s:\n", directoryPath);
-    if(directoryEntries != NULL) {
-        int i = 0;
-        while(directoryEntries[i] != NULL) {
-            printf("%s \n", directoryEntries[i]);
-            free(directoryEntries[i]);
-            i++;
-        }
-    } else {
-        printf("Directory is empty\n");
-    }
-    printf("---------------\n");
-}
+void listDirectory(char *directoryPath);
+void *mt_createFile(void *filePath);
+void *mt_deleteFile(void *filePath);
 
 int main(int argc, const char * argv[]) {
     /*
@@ -99,11 +88,53 @@ int main(int argc, const char * argv[]) {
     writedisk("virtualdisk_insideFileCopy");
     */
     
+    /*
      // Move file within virtual disk
      format();
      copyToVirtualDisk("main/copy.txt", "file.txt");
      moveFile("main/copy.txt", "/copy.txt");
      writedisk("virtualdisk_insideFileMove");
+     */
+    
+    // Multi-threaded access
+    format();
+    // Create and start two threads
+    pthread_t first, second;
+    pthread_create(&first, NULL, mt_createFile, "file.txt");
+    pthread_create(&second, NULL, mt_deleteFile, "file.txt");
+    writedisk("virtualdisk_multiThreaded");
     
     return 0;
+}
+
+void *mt_createFile(void *filePath) {
+    pthread_mutex_lock(getVirtualDiskLock());
+    MyFILE *file = myfopen(filePath, "w");
+    myfputc('X', file);
+    myfclose(file);
+    pthread_mutex_unlock(getVirtualDiskLock());
+    pthread_exit(NULL);
+}
+
+void *mt_deleteFile(void *filePath) {
+    pthread_mutex_lock(getVirtualDiskLock());
+    myremove(filePath);
+    pthread_mutex_unlock(getVirtualDiskLock());
+    pthread_exit(NULL);
+}
+
+void listDirectory(char *directoryPath) {
+    char **directoryEntries = mylistdir(directoryPath);
+    printf("Printing contents of %s:\n", directoryPath);
+    if(directoryEntries != NULL) {
+        int i = 0;
+        while(directoryEntries[i] != NULL) {
+            printf("%s \n", directoryEntries[i]);
+            free(directoryEntries[i]);
+            i++;
+        }
+    } else {
+        printf("Directory is empty\n");
+    }
+    printf("---------------\n");
 }

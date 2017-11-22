@@ -73,14 +73,20 @@ typedef struct dirblock {
 
 typedef Byte datablock_t [ BLOCKSIZE ] ;
 
+// Volume block
+typedef struct volumeBlock {
+    pthread_mutex_t lock;
+    char name[MAXNAME];
+} volumeblock_t;
 
 // a diskblock can be either a directory block, a FAT block or actual data
 
 typedef union block {
-   datablock_t data ;
-   dirblock_t  dir  ;
-   fatblock_t  fat  ;
-} diskblock_t ;
+    datablock_t data;
+    dirblock_t dir;
+    fatblock_t fat;
+    volumeblock_t volume;
+} diskblock_t;
 
 // finally, this is the disk: a list of diskblocks
 // the disk is declared as extern, as it is shared in the program
@@ -107,10 +113,11 @@ typedef struct filedescriptor {
 /*******************
  Virtual disk functions
  ********************/
-void format() ;
+void format(void);
 void readdisk (const char *filename);
 void writedisk ( const char * filename ) ;
 void cleanVirtualDisk(short firstFATIndex);
+pthread_mutex_t *getVirtualDiskLock(void);
 
 /*******************
  FAT table functions
@@ -118,7 +125,6 @@ void cleanVirtualDisk(short firstFATIndex);
 void loadFAT(void);
 void saveFAT(void);
 int freeFAT(void);
-
 
 /*******************
  File functions
