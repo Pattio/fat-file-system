@@ -44,6 +44,64 @@ void readdisk (const char *filename)
     fclose(dest) ;
 }
 
+void writeEncryptedDisk(const char *filename, const char *password) {
+    // Get lenghth of key
+    unsigned long keyLength = strlen(password);
+    // Create encrypted virtual disk and set all bytes to 0
+    diskblock_t encryptedDisk [MAXBLOCKS];
+    memset(encryptedDisk, 0, sizeof(encryptedDisk));
+    // Copy current virtual disk to encrypted disk
+    for(int i = 0; i < MAXBLOCKS; i++) {
+        memcpy(encryptedDisk[i].data, virtualDisk[i].data, BLOCKSIZE);
+    }
+
+    // Go through each byte in encrypted disk and XOR it with password
+    // Skip 0 bytes and special bytes like -1, which are used for our FAT table
+    for(int i = 0; i < MAXBLOCKS; i++) {
+        for(int j = 0; j < BLOCKSIZE; j++) {
+            if(encryptedDisk[i].data[j] != 0xff &&
+               encryptedDisk[i].data[j] != 0 &&
+               encryptedDisk[i].data[j] != password[j % keyLength]) {
+                encryptedDisk[i].data[j] ^= (password[j % keyLength]);
+            }
+        }
+    }
+    
+    // Save encrypted virtual disk as a file
+    FILE *encryptedFile = fopen(filename, "w");
+    fwrite(encryptedDisk, sizeof(encryptedDisk), 1, encryptedFile);
+    fclose(encryptedFile);
+}
+
+void readEncryptedDisk(const char *filename, const char *password) {
+    // Read encrypted disk file
+    FILE *encryptedFile = fopen(filename, "r");
+    unsigned long keyLength = strlen(password);
+    // Put encrypted disk data to encrypted disk diskblock
+    diskblock_t encryptedDisk [MAXBLOCKS];
+    fread(encryptedDisk, sizeof(encryptedDisk), 1, encryptedFile);
+    // Clean current virtual disk
+    memset(virtualDisk, 0, sizeof(encryptedDisk));
+    
+    // Go through each byte in encrypted disk and XOR it with password
+    // Skip 0 bytes and special bytes like -1, which are used for our FAT table
+    for(int i = 0; i < MAXBLOCKS; i++) {
+        for(int j = 0; j < BLOCKSIZE; j++) {
+            if(encryptedDisk[i].data[j] != 0xff &&
+               encryptedDisk[i].data[j] != 0 &&
+               encryptedDisk[i].data[j] != password[j % keyLength]) {
+                encryptedDisk[i].data[j] ^= (password[j % keyLength]);
+            }
+        }
+    }
+    
+    // Copy decrypted disk to virtual disk
+    for(int i = 0; i < MAXBLOCKS; i++) {
+        memcpy(virtualDisk[i].data, encryptedDisk[i].data, BLOCKSIZE);
+    }
+    // Close encrypted disk file
+    fclose(encryptedFile);
+}
 
 /* the basic interface to the virtual disk
  * this moves memory around

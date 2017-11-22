@@ -96,6 +96,7 @@ int main(int argc, const char * argv[]) {
      writedisk("virtualdisk_insideFileMove");
      */
     
+    /*
     // Multi-threaded access
     format();
     // Create and start two threads
@@ -103,6 +104,23 @@ int main(int argc, const char * argv[]) {
     pthread_create(&first, NULL, mt_createFile, "file.txt");
     pthread_create(&second, NULL, mt_deleteFile, "file.txt");
     writedisk("virtualdisk_multiThreaded");
+    */
+    
+    
+    // Disk encryption
+    format();
+    // Copy file from hard disk to virtual disk
+    copyToVirtualDisk("main/copy.txt", "file.txt");
+    // Save encrypted disk
+    writeEncryptedDisk("virtualdisk_encrypted", "edvinas");
+    // Try to read disk with wrong password
+    readEncryptedDisk("virtualdisk_encrypted", "wrongpassword");
+    // Save results
+    writedisk("virtualdisk_encrypted_wrong_password");
+    // Try to read disk with correct password
+    readEncryptedDisk("virtualdisk_encrypted", "edvinas");
+    // Save results
+    writedisk("virtualdisk_encrypted_correct_password");
     
     return 0;
 }
