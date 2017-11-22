@@ -108,6 +108,7 @@ typedef struct filedescriptor {
  Virtual disk functions
  ********************/
 void format() ;
+void readdisk (const char *filename);
 void writedisk ( const char * filename ) ;
 void cleanVirtualDisk(short firstFATIndex);
 
@@ -127,6 +128,8 @@ void myfclose(MyFILE *stream);
 void myfputc(int b, MyFILE *stream);
 int myfgetc(MyFILE *stream);
 void myremove(const char *path);
+void copyToVirtualDisk(const char *virtualDiskPath, const char *realDiskPath);
+void copyToRealDisk(const char *realDiskPath, const char *virtualDiskPath);
 
 static void myfopenRead(const char *filePath, MyFILE **file);
 static void myfopenWrite(const char *filePath, MyFILE **file);

@@ -212,10 +212,10 @@ static void myfopenWrite(const char *filePath, MyFILE **file) {
     fileDirectory->isdir = 0;
     fileDirectory->firstblock = freeBlockIndex;
     strcpy(fileDirectory->name, fileName);
-    (*file)->dirEntry = fileDirectory;
     
     // Put file entry into current directory
     directoryBlock->entrylist[directoryBlock->nextEntry] = *fileDirectory;
+    (*file)->dirEntry = &directoryBlock->entrylist[directoryBlock->nextEntry];
     directoryBlock->nextEntry++;
 }
 

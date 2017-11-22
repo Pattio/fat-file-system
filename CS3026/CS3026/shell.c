@@ -28,6 +28,7 @@ void listDirectory(char *directoryPath) {
 }
 
 int main(int argc, const char * argv[]) {
+    /*
     // Format new virtual disk
     format();
     // Create a directory “/firstdir/seconddir” in the virtual disk
@@ -80,5 +81,17 @@ int main(int argc, const char * argv[]) {
     myrmdir("firstdir");
     // Write out virtual disk to “virtualdiskA5_A1_d”
     writedisk("virtualdiskA5_A1_d");
+     */
+    
+    
+    // Copy file from real disk to virtual disk
+    format();
+    copyToVirtualDisk("main/copy.txt", "file.txt");
+    writedisk("fileCopy");
+    format();
+    readdisk("fileCopy");
+    copyToRealDisk("copyFromVirtualDisk.txt", "main/copy.txt");
+    writedisk("fileCopy");
+    
     return 0;
 }

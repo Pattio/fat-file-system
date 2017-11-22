@@ -203,10 +203,10 @@ static void myfopenWrite(const char *filePath, MyFILE **file) {
     fileDirectory->isdir = 0;
     fileDirectory->firstblock = freeBlockIndex;
     strcpy(fileDirectory->name, fileName);
-    (*file)->dirEntry = fileDirectory;
-    
+
     // Put file entry into current directory
     directoryBlock->entrylist[directoryBlock->nextEntry] = *fileDirectory;
+    (*file)->dirEntry = &directoryBlock->entrylist[directoryBlock->nextEntry];
     directoryBlock->nextEntry++;
 }
 
@@ -307,6 +307,56 @@ void myremove(const char *path) {
     directoryBlock->nextEntry--;
 }
 
+void copyToVirtualDisk(const char *virtualDiskPath, const char *realDiskPath) {
+    // Create or open file on virtual disk
+    MyFILE *vdFile = myfopen(virtualDiskPath, "w");
+    FILE *rdFile = fopen(realDiskPath, "r");
+    
+    // Check for errors
+    if(rdFile == NULL) {
+        fprintf(stderr, "Couldn't find %s on real disk", realDiskPath);
+        return;
+    }
+    
+    if(vdFile == NULL) {
+        fprintf(stderr, "Couldn't create file on virtual disk");
+        return;
+    }
+    
+    // Read each character from real disk file and put it to file on virtual disk
+    int character;
+    while((character = fgetc(rdFile)) != EOF) myfputc(character, vdFile);
+    
+    // Close files
+    myfclose(vdFile);
+    fclose(rdFile);
+}
+
+void copyToRealDisk(const char *realDiskPath, const char *virtualDiskPath) {
+    // Open file on virtual disk
+    MyFILE *vdFile = myfopen(virtualDiskPath, "r");
+    FILE *rdFile = fopen(realDiskPath, "w");
+    
+    // Check for errors
+    if(rdFile == NULL) {
+        fprintf(stderr, "Couldn't create file on real disk");
+        return;
+    }
+    
+    if(vdFile == NULL) {
+        fprintf(stderr, "Couldn't find %s on virtual disk", virtualDiskPath);
+        return;
+    }
+    
+    // Read each character from virtual disk file and put it to file on real disk
+    int character;
+    while((character = myfgetc(vdFile)) != EOF) fputc(character, rdFile);
+    
+    // Close files
+    myfclose(vdFile);
+    fclose(rdFile);
+}
+
 void cleanVirtualDisk(short firstFATIndex) {
     short currentFATIndex = firstFATIndex;
     // While entry continous in FAT table, remove data in
@@ -351,12 +401,6 @@ dirblock_t * findDirectoryBlock(const char *path, char **filename, int modify) {
                 return NULL;
             }
             return parentBlock;
-            dirblock_t *grandParentBlock = findParentBlock(rootDirectoryBlock, parentBlock);
-            for(int i = 0; i < grandParentBlock->nextEntry; i++) {
-                if(&virtualDisk[grandParentBlock->entrylist[i].firstblock].dir == parentBlock) {
-//                    return parentBlock;
-                }
-            }
         }
     }
     
