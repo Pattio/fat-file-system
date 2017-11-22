@@ -357,6 +357,22 @@ void copyToRealDisk(const char *realDiskPath, const char *virtualDiskPath) {
     fclose(rdFile);
 }
 
+void copyFile(const char *source, const char *destination) {
+    MyFILE *sourceFILE = myfopen(source, "r");
+    MyFILE *destinationFILE = myfopen(destination, "w");
+    if(sourceFILE == NULL || destinationFILE == NULL) {
+        fprintf(stderr, "Operation failed, either destination directory is full, or source file doesn't exist");
+        return;
+    }
+    
+    int character;
+    while((character = myfgetc(sourceFILE)) != EOF) myfputc(character, destinationFILE);
+
+    // Close files
+    myfclose(sourceFILE);
+    myfclose(destinationFILE);
+}
+
 void cleanVirtualDisk(short firstFATIndex) {
     short currentFATIndex = firstFATIndex;
     // While entry continous in FAT table, remove data in

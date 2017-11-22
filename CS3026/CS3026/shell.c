@@ -83,15 +83,21 @@ int main(int argc, const char * argv[]) {
     writedisk("virtualdiskA5_A1_d");
      */
     
-    
+    /*
     // Copy file from real disk to virtual disk
     format();
     copyToVirtualDisk("main/copy.txt", "file.txt");
-    writedisk("fileCopy");
-    format();
-    readdisk("fileCopy");
     copyToRealDisk("copyFromVirtualDisk.txt", "main/copy.txt");
-    writedisk("fileCopy");
+    writedisk("virtualdisk_fileCopy");
+    */
+    
+    /*
+    // Copy file within virtual disk
+    format();
+    copyToVirtualDisk("main/copy.txt", "file.txt");
+    copyFile("main/copy.txt", "secondary/othercopy.txt");
+    writedisk("virtualdisk_insideFileCopy");
+    */
     
     return 0;
 }
