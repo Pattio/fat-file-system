@@ -130,7 +130,8 @@ int myfgetc(MyFILE *stream);
 void myremove(const char *path);
 void copyToVirtualDisk(const char *virtualDiskPath, const char *realDiskPath);
 void copyToRealDisk(const char *realDiskPath, const char *virtualDiskPath);
-void copyFile(const char *source, const char *destination);
+int copyFile(const char *source, const char *destination);
+void moveFile(const char *source, const char *destination);
 
 static void myfopenRead(const char *filePath, MyFILE **file);
 static void myfopenWrite(const char *filePath, MyFILE **file);

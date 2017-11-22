@@ -357,12 +357,12 @@ void copyToRealDisk(const char *realDiskPath, const char *virtualDiskPath) {
     fclose(rdFile);
 }
 
-void copyFile(const char *source, const char *destination) {
+int copyFile(const char *source, const char *destination) {
     MyFILE *sourceFILE = myfopen(source, "r");
     MyFILE *destinationFILE = myfopen(destination, "w");
     if(sourceFILE == NULL || destinationFILE == NULL) {
-        fprintf(stderr, "Operation failed, either destination directory is full, or source file doesn't exist");
-        return;
+        fprintf(stderr, "Operation failed, either destination directory is full, or source file doesn't exist\n");
+        return 0;
     }
     
     int character;
@@ -371,6 +371,17 @@ void copyFile(const char *source, const char *destination) {
     // Close files
     myfclose(sourceFILE);
     myfclose(destinationFILE);
+    return 1;
+}
+
+void moveFile(const char *source, const char *destination) {
+    // Copy file to new location
+    if(!copyFile(source, destination)) {
+        fprintf(stderr, "File could not be moved\n");
+        return;
+    }
+    // Delete old file
+    myremove(source);
 }
 
 void cleanVirtualDisk(short firstFATIndex) {

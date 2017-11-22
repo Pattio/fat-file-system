@@ -99,5 +99,11 @@ int main(int argc, const char * argv[]) {
     writedisk("virtualdisk_insideFileCopy");
     */
     
+     // Move file within virtual disk
+     format();
+     copyToVirtualDisk("main/copy.txt", "file.txt");
+     moveFile("main/copy.txt", "/copy.txt");
+     writedisk("virtualdisk_insideFileMove");
+    
     return 0;
 }
