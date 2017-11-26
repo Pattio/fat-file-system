@@ -71,7 +71,7 @@ typedef struct filedescriptor {
  ********************/
 void format(void);
 void readdisk (const char *filename);
-void writedisk ( const char * filename ) ;
+void writedisk (const char * filename);
 void writeEncryptedDisk(const char *filename, const char *password);
 void readEncryptedDisk(const char *filename, const char *password);
 void cleanVirtualDisk(short firstFATIndex);
