@@ -104,7 +104,7 @@ int main(int argc, const char * argv[]) {
     writedisk("virtualdisk_multiThreaded");
     */
     
-    /*
+    
     // Disk encryption
     format();
     // Copy file from hard disk to virtual disk
@@ -119,7 +119,7 @@ int main(int argc, const char * argv[]) {
     readEncryptedDisk("virtualdisk_encrypted", "edvinas");
     // Save results
     writedisk("virtualdisk_encrypted_correct_password");
-    */
+    
     return 0;
 }
 
