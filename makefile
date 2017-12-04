@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-c -std=c99 -Wall
+CFLAGS=-c -Wall
 LFLAGS=
 
 all: shell
