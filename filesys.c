@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include "filesys.h"
 
 diskblock_t virtualDisk [MAXBLOCKS];
@@ -691,8 +690,7 @@ void mychdir(const char *path) {
         for(int i = 0; i < parentDirectoryBlock->nextEntry; i++) {
             if(strcmp(parentDirectoryBlock->entrylist[i].name, head) == 0 &&
                parentDirectoryBlock->entrylist[i].isdir) {
-                // If last path element then set current dir
-                if(tail == NULL) currentDir = &parentDirectoryBlock->entrylist[i];
+                currentDir = &parentDirectoryBlock->entrylist[i];
                 parentDirectoryBlock = &(virtualDisk[parentDirectoryBlock->entrylist[i].firstblock].dir);
             }
         }

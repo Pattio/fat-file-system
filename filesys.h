@@ -4,6 +4,7 @@
 #define FILESYS_H
 
 #include <time.h>
+#include <pthread.h>
 
 #define rootDirectoryIndex 3
 #define MAXBLOCKS     1024
